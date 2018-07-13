@@ -1,11 +1,9 @@
-import re
 import logging
 import argparse
 import os
 import json
 from pprint import pprint
 import hashlib
-import shutil
 
 from application.api import PCS
 
@@ -39,7 +37,7 @@ def upload_file(path, dest, pcs):
         res = pcs.upload(dest, fp, file_name)
         md5 = json.loads(res.text)['md5']
         if md5 == fmd5.hexdigest():
-            shutil.rmtree(path, ignore_errors=True)
+            os.remove(path)
             logger.info('Finish, "{}" -> "{}"'.format(path, dest))
         else:
             logger.error('Fail, "{}" -> "{}"'.format(path, dest))
