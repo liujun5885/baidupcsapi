@@ -1,20 +1,12 @@
+import re
 import argparse
 import os
 import json
 from pprint import pprint
-import logging
 import hashlib
 import shutil
 
 from application.api import PCS
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter(fmt='%(asctime)s [%(module)s] %(levelname)s: %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 
 def func_list(args, pcs):
@@ -24,7 +16,14 @@ def func_list(args, pcs):
 
 def upload_file(path, dest, pcs):
     file_name = os.path.split(path)[-1]
-    logger.info('Start, Baidupcsapi uploads "{}" onto "{}" as "{}"'.format(path, dest, file_name))
+    print('Start, "{}" -> "{}"'.format(path, dest))
+
+    start = file_name.find('-')
+    end = file_name.find('.')
+
+    if start != -1 and end != -1:
+        file_name = file_name[:start] + file_name[end:]
+
     with open(path, 'rb') as fp:
         fmd5 = hashlib.md5(fp.read())
     with open(path, 'rb') as fp:
@@ -32,9 +31,9 @@ def upload_file(path, dest, pcs):
         md5 = json.loads(res.text)['md5']
         if md5 == fmd5.hexdigest():
             shutil.rmtree(path, ignore_errors=True)
-            logger.info('Finish, Baidupcsapi uploads "{}" onto "{}" as "{}"'.format(path, dest, file_name))
+            print('Finish, "{}" -> "{}"'.format(path, dest))
         else:
-            logger.error('Fail, Baidupcsapi uploads "{}" onto "{}" as "{}"'.format(path, dest, file_name))
+            print('Fail, "{}" -> "{}"'.format(path, dest))
 
 
 def upload_folder(folder, dest, pcs):
