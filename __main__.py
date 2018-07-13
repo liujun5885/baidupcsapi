@@ -25,8 +25,8 @@ def upload_file(path, dest, pcs):
     file_name = os.path.split(path)[-1]
     logger.info('Start, "{}" -> "{}"'.format(path, dest))
 
-    start = file_name.find('-')
-    end = file_name.find('.')
+    start = file_name.rfind('-')
+    end = file_name.rfind('.')
 
     if start != -1 and end != -1:
         file_name = file_name[:start] + file_name[end:]
