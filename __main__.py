@@ -1,4 +1,5 @@
 import re
+import logging
 import argparse
 import os
 import json
@@ -8,6 +9,14 @@ import shutil
 
 from application.api import PCS
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter(fmt='%(asctime)s [%(module)s] %(levelname)s: %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 def func_list(args, pcs):
     res = pcs.list_files(args.folder)
@@ -16,7 +25,7 @@ def func_list(args, pcs):
 
 def upload_file(path, dest, pcs):
     file_name = os.path.split(path)[-1]
-    print('Start, "{}" -> "{}"'.format(path, dest))
+    logger.info('Start, "{}" -> "{}"'.format(path, dest))
 
     start = file_name.find('-')
     end = file_name.find('.')
@@ -31,9 +40,9 @@ def upload_file(path, dest, pcs):
         md5 = json.loads(res.text)['md5']
         if md5 == fmd5.hexdigest():
             shutil.rmtree(path, ignore_errors=True)
-            print('Finish, "{}" -> "{}"'.format(path, dest))
+            logger.info('Finish, "{}" -> "{}"'.format(path, dest))
         else:
-            print('Fail, "{}" -> "{}"'.format(path, dest))
+            logger.error('Fail, "{}" -> "{}"'.format(path, dest))
 
 
 def upload_folder(folder, dest, pcs):
