@@ -42,7 +42,6 @@ BAIDUPAN_HEADERS = {"Referer": "http://pan.baidu.com/disk/home",
 # uses CDN_DOMAIN/monitor.jpg to test speed for each CDN
 
 
-
 def default_captcha_handler(image_url):
     captcha_file = tempfile.NamedTemporaryFile(suffix=".png")
     data = requests.get(image_url).content
@@ -129,7 +128,7 @@ def check_login(func):
                 foo = json.loads(ret.content.decode('utf-8'))
                 if 'errno' in foo and foo['errno'] == -6:
                     logging.debug(
-                            'Offline, deleting cookies file then relogin.')
+                        'Offline, deleting cookies file then relogin.')
                     path = '.{0}.cookies'.format(args[0].username)
                     if os.path.exists(path):
                         os.remove(path)
@@ -148,12 +147,37 @@ class PCSBase(object):
     codeString = None
     api_template = 'http://%s/api/{0}' % BAIDUPAN_SERVER
 
-    def __init__(self, username, password, captcha_func=None, verify_func=None):
+    def __init__(self, username=None, password=None, cookie=None, captcha_func=None, verify_func=None):
+        """
+        :param username: 百度网盘的用户名
+        :type username: str
+
+        :param password: 百度网盘的密码
+        :type password: str
+
+        :param cookie: user's cookie file
+        :type cookie: str
+
+        :param captcha_callback: 验证码的回调函数
+
+            .. note::
+                该函数会获得一个jpeg文件的内容，返回值需为验证码
+
+        :param verify_callback: 安全验证码输入函数
+
+            .. note::
+                该函数返回值为字符串作为安全验证码输入
+        """
+
         self.session = requests.session()
         self.username = username
         self.password = password
         self.user = {}
         self.progress_func = None
+        self.cookies_file = cookie
+        if not (username or password or cookie):
+            raise Exception('Bad parameters')
+
         if captcha_func:
             self.captcha_func = captcha_func
         else:
@@ -174,7 +198,7 @@ class PCSBase(object):
         :returns: str -- 服务器地址
         """
         ret = requests.get(
-                'https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
+            'https://pcs.baidu.com/rest/2.0/pcs/manage?method=listhost').content
         serverlist = [server['host'] for server in json.loads(ret)['list']]
         url_pattern = 'http://{0}/monitor.jpg'
         time_record = []
@@ -228,20 +252,18 @@ class PCSBase(object):
             self._login()
 
     def _save_cookies(self):
-        cookies_file = '.{0}.cookies'.format(self.username)
-        with open(cookies_file, 'wb') as f:
+        with open(self.cookies_file, 'wb') as f:
             pickle.dump(
-                    requests.utils.dict_from_cookiejar(self.session.cookies), f)
+                requests.utils.dict_from_cookiejar(self.session.cookies), f)
 
     def _load_cookies(self):
-        cookies_file = '.{0}.cookies'.format(self.username)
-        logging.debug('cookies file:' + cookies_file)
-        if os.path.exists(cookies_file):
+        logging.debug('cookies file:' + self.cookies_file)
+        if os.path.exists(self.cookies_file):
             logging.debug('%s cookies file has already existed.' %
                           self.username)
-            with open(cookies_file, 'rb') as cookies_file:
+            with open(self.cookies_file, 'rb') as cookies_file:
                 cookies = requests.utils.cookiejar_from_dict(
-                        pickle.load(cookies_file))
+                    pickle.load(cookies_file))
                 logging.debug(str(cookies))
                 self.session.cookies = cookies
                 self.user['BDUSS'] = self.session.cookies['BDUSS']
@@ -253,8 +275,8 @@ class PCSBase(object):
     def _get_token(self):
         # Token
         ret = self.session.get(
-                'https://passport.baidu.com/v2/api/?getapi&tpl=mn&apiver=v3&class=login&tt=%s&logintype=dialogLogin&callback=0' % int(
-                        time.time())).text.replace('\'', '\"')
+            'https://passport.baidu.com/v2/api/?getapi&tpl=mn&apiver=v3&class=login&tt=%s&logintype=dialogLogin&callback=0' % int(
+                time.time())).text.replace('\'', '\"')
         foo = json.loads(ret)
         logging.info('token %s' % foo['data']['token'])
         return foo['data']['token']
@@ -263,7 +285,7 @@ class PCSBase(object):
         # Captcha
         if code_string:
             verify_code = self.captcha_func(
-                    "https://passport.baidu.com/cgi-bin/genimage?" + code_string.decode('utf-8'))
+                "https://passport.baidu.com/cgi-bin/genimage?" + code_string.decode('utf-8'))
         else:
             verify_code = ""
 
@@ -311,7 +333,7 @@ class PCSBase(object):
                           'ppui_logintime': '50918',
                           'callback': 'parent.bd__pcbs__oa36qm'}
             result = self.session.post(
-                    'https://passport.baidu.com/v2/api/?login', data=login_data)
+                'https://passport.baidu.com/v2/api/?login', data=login_data)
 
             # 是否需要验证码
             if b'err_no=257' in result.content or b'err_no=6' in result.content:
@@ -387,9 +409,7 @@ class PCSBase(object):
 
                     vresp_data = json.loads(vresp.content.decode())
                     if vresp_data['errno'] == 110000:
-
                         loginproxy_resp = self.session.get(urlparse.unquote(loginproxy_url.decode()))
-
 
                         return
             else:
@@ -467,39 +487,19 @@ class PCSBase(object):
                 )
 
                 response = self.session.post(
-                        api, data=body, verify=False, headers=headers, **kwargs)
+                    api, data=body, verify=False, headers=headers, **kwargs)
         else:
             api = url
             if uri == 'filemanager' or uri == 'rapidupload' or uri == 'filemetas' or uri == 'precreate':
                 response = self.session.post(
-                        api, params=params, verify=False, headers=headers, **kwargs)
+                    api, params=params, verify=False, headers=headers, **kwargs)
             else:
                 response = self.session.get(
-                        api, params=params, verify=False, headers=headers, **kwargs)
+                    api, params=params, verify=False, headers=headers, **kwargs)
         return response
 
 
 class PCS(PCSBase):
-    def __init__(self, username, password, captcha_callback=None, verify_callback=None):
-        """
-        :param username: 百度网盘的用户名
-        :type username: str
-
-        :param password: 百度网盘的密码
-        :type password: str
-
-        :param captcha_callback: 验证码的回调函数
-
-            .. note::
-                该函数会获得一个jpeg文件的内容，返回值需为验证码
-
-        :param verify_callback: 安全验证码输入函数
-
-            .. note::
-                该函数返回值为字符串作为安全验证码输入
-        """
-        super(PCS, self).__init__(username, password, captcha_func=captcha_callback,
-                                  verify_func=verify_callback)
 
     def __err_handler(self, act, errno, callback=None, args=(), kwargs=None):
         """百度网盘下载错误控制
@@ -830,8 +830,8 @@ class PCS(PCSBase):
 
     def _handle_shared_captcha(self, shareid, uk, password):  # 处理分享页的验证码
         rep = json.loads(
-                self._request(None, data={"prod": "shareverify"},
-                              url="https://pan.baidu.com/api/getcaptcha").content.decode('utf-8'))
+            self._request(None, data={"prod": "shareverify"},
+                          url="https://pan.baidu.com/api/getcaptcha").content.decode('utf-8'))
 
         vcode = self.captcha_func("https://pan.baidu.com/genimage?" + str(rep["vcode_str"]))
         return self._verify_shared_file(shareid, uk, password, vcode=vcode, vcode_str=str(rep["vcode_str"]))
@@ -1261,9 +1261,9 @@ class PCS(PCSBase):
         }
         data = {
             'filelist': json.dumps([{
-                                        "path": path,
-                                        "dest": dest,
-                                        "newname": __path(path)} for path in path_list]),
+                "path": path,
+                "dest": dest,
+                "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'move', url=url, data=data, extra_params=params, **kwargs)
@@ -1313,9 +1313,9 @@ class PCS(PCSBase):
         }
         data = {
             'filelist': json.dumps([{
-                                        "path": path,
-                                        "dest": dest,
-                                        "newname": __path(path)} for path in path_list]),
+                "path": path,
+                "dest": dest,
+                "newname": __path(path)} for path in path_list]),
         }
         url = 'http://{0}/api/filemanager'.format(BAIDUPAN_SERVER)
         return self._request('filemanager', 'copy', url=url, data=data, extra_params=params, **kwargs)
