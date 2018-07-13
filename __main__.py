@@ -3,6 +3,7 @@ import os
 import json
 from pprint import pprint
 import hashlib
+import shutil
 
 from application.api import PCS
 
@@ -20,6 +21,7 @@ def upload_file(path, dest, pcs):
         res = pcs.upload(dest, fp, file_name)
         md5 = json.loads(res.text)['md5']
         if md5 == fmd5.hexdigest():
+            shutil.rmtree(path, ignore_errors=True)
             print('OK, Baidupcsapi uploads "{}" onto "{}" as "{}"'.format(path, dest, file_name))
         else:
             print('ERR, Baidupcsapi uploads "{}" onto "{}" as "{}"'.format(path, dest, file_name))
