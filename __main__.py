@@ -7,13 +7,9 @@ import hashlib
 
 from application.api import PCS
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter(fmt='%(asctime)s [%(module)s] %(levelname)s: %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+                    datefmt='%a, %d %b %Y %H:%M:%S')
 
 
 def func_list(args, pcs):
@@ -23,7 +19,7 @@ def func_list(args, pcs):
 
 def upload_file(path, dest, pcs):
     file_name = os.path.split(path)[-1]
-    logger.info('Start, "{}" -> "{}"'.format(path, dest))
+    logging.info('Start, "{}" -> "{}"'.format(path, dest))
 
     start = file_name.rfind('-')
     end = file_name.rfind('.')
@@ -35,12 +31,14 @@ def upload_file(path, dest, pcs):
         fmd5 = hashlib.md5(fp.read())
     with open(path, 'rb') as fp:
         res = pcs.upload(dest, fp, file_name)
-        md5 = json.loads(res.text)['md5']
+        data = json.loads(res.text)
+        pprint(data)
+        md5 = data['md5']
         if md5 == fmd5.hexdigest():
             os.remove(path)
-            logger.info('Finish, "{}" -> "{}"'.format(path, dest))
+            logging.info('Finish, "{}" -> "{}"'.format(path, dest))
         else:
-            logger.error('Fail, "{}" -> "{}"'.format(path, dest))
+            logging.error('Fail, "{}" -> "{}"'.format(path, dest))
 
 
 def upload_folder(folder, dest, pcs):

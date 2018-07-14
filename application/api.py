@@ -260,7 +260,7 @@ class PCSBase(object):
         logging.debug('cookies file:' + self.cookies_file)
         if os.path.exists(self.cookies_file):
             logging.debug('%s cookies file has already existed.' %
-                          self.username)
+                          self.cookies_file)
             with open(self.cookies_file, 'rb') as cookies_file:
                 cookies = requests.utils.cookiejar_from_dict(
                     pickle.load(cookies_file))
