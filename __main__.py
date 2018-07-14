@@ -32,6 +32,16 @@ def upload_file(path, dest, pcs):
     with open(path, 'rb') as fp:
         res = pcs.upload(dest, fp, file_name)
         data = json.loads(res.text)
+        """
+        {'ctime': 1531534213,
+         'fs_id': 115394279740290,
+         'isdir': 0,
+         'md5': '85f0be30e17e696a4dbd312f5f412ff7',
+         'mtime': 1531534213,
+         'path': '//README.md',
+         'request_id': 4509236039960989015,
+         'size': 13}
+        """
         pprint(data)
         md5 = data['md5']
         if md5 == fmd5.hexdigest():
